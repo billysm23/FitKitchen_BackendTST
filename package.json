@@ -1,0 +1,38 @@
+{
+    "name": "fitkitchen-backend",
+    "version": "1.0.0",
+    "description": "Backend service for FitKitchen personalized catering system",
+    "main": "app.js",
+    "scripts": {
+        "start": "node src/app.js",
+        "dev": "nodemon src/app.js",
+        "lint": "eslint .",
+        "test": "jest",
+        "test:watch": "jest --watch"
+    },
+    "dependencies": {
+        "@supabase/supabase-js": "^2.39.0",
+        "bcryptjs": "^2.4.3",
+        "cors": "^2.8.5",
+        "dotenv": "^16.3.1",
+        "express": "^4.18.2",
+        "express-rate-limit": "^7.1.5",
+        "express-validator": "^7.0.1",
+        "helmet": "^7.1.0",
+        "jsonwebtoken": "^9.0.2",
+        "morgan": "^1.10.0",
+        "winston": "^3.11.0"
+    },
+    "devDependencies": {
+        "eslint": "^8.55.0",
+        "eslint-config-prettier": "^9.1.0",
+        "eslint-plugin-prettier": "^5.0.1",
+        "jest": "^29.7.0",
+        "nodemon": "^3.0.2",
+        "prettier": "^3.1.0",
+        "supertest": "^6.3.3"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    }
+}
