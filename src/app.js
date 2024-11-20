@@ -12,24 +12,10 @@ const app = express();
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
-const allowedOrigins = [
-    process.env.CLIENT_URL
-];
-
 const corsOptions = {
-    origin: function (origin, callback) {
-        console.log('Request from origin:', origin);
-        
-        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-            console.log('Origin allowed:', origin);
-            callback(null, true);
-        } else {
-            console.log('Origin blocked:', origin);
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
+    origin: ['http://localhost:5173', 'http://localhost:3000'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Access-Control-Allow-Origin'],
     credentials: true,
     optionsSuccessStatus: 200
 };

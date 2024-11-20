@@ -1,135 +1,110 @@
 const supabase = require('../config/database');
 const bcrypt = require('bcryptjs');
-const { validateEmail, validateUsername, validatePassword } = require('../utils/validator');
+const AppError = require('../utils/errors/AppError');
+const ErrorCodes = require('../utils/errors/errorCodes');
 
 class User {
     static async findByEmail(email) {
-        validateEmail(email);
-        const { data, error } = await supabase
-            .from('users')
-            .select('*')
-            .eq('email', email)
-            .single();
+        try {
+            const { data, error } = await supabase
+                .from('users')
+                .select('*')
+                .eq('email', email)
+                .single();
 
-        if (error) throw error;
-        return data;
-    }
+            if (error) {
+                if (error.code === 'PGRST116') {
+                    return null; // User not found
+                }
+                throw new AppError(
+                    'Database error while finding user',
+                    500,
+                    ErrorCodes.DATABASE_ERROR
+                );
+            }
 
-    static async findById(id) {
-        if (!id) throw new AppError('User ID is required', 400, ErrorCodes.MISSING_FIELD);
-        
-        const { data, error } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', id)
-            .single();
-
-        if (error) throw error;
-        return data;
+            return data;
+        } catch (error) {
+            console.error('Find by email error:', error);
+            throw error;
+        }
     }
 
     static async findOne(query) {
-        if (query.email) validateEmail(query.email);
-        if (query.username) validateUsername(query.username);
+        try {
+            let queryBuilder = supabase
+                .from('users')
+                .select('*');
 
-        const { data, error } = await supabase
-            .from('users')
-            .select('*')
-            .or(`email.eq.${query.email},username.eq.${query.username}`)
-            .single();
+            if (query.email) {
+                queryBuilder = queryBuilder.eq('email', query.email);
+            }
+            if (query.username) {
+                queryBuilder = queryBuilder.eq('username', query.username);
+            }
 
-        if (error && error.code !== 'PGRST116') throw error;
-        return data;
+            const { data, error } = await queryBuilder.single();
+
+            if (error) {
+                if (error.code === 'PGRST116') {
+                    return null;
+                }
+                throw new AppError(
+                    'Database error while finding user',
+                    500,
+                    ErrorCodes.DATABASE_ERROR
+                );
+            }
+
+            return data;
+        } catch (error) {
+            console.error('Find one error:', error);
+            throw error;
+        }
     }
 
     static async create(userData) {
-        // Validasi input register
-        validateEmail(userData.email);
-        validateUsername(userData.username);
-        validatePassword(userData.password);
+        try {
+            const hashedPassword = await bcrypt.hash(userData.password, 10);
 
-        // Cek user sudah ada atau belum
-        const existingUser = await this.findOne({
-            email: userData.email,
-            username: userData.username
-        });
-
-        if (existingUser) {
-            let message = 'User already exists with this ';
-            if (existingUser.email === userData.email && existingUser.username === userData.username) {
-                message += 'email and username';
-            } else if (existingUser.email === userData.email) {
-                message += 'email';
-            } else {
-                message += 'username';
+            const { data: existingUser } = await this.findByEmail(userData.email);
+            if (existingUser) {
+                throw new AppError(
+                    'User with this email already exists',
+                    409,
+                    ErrorCodes.RESOURCE_EXISTS
+                );
             }
-            throw new AppError(message, 409, ErrorCodes.RESOURCE_EXISTS);
+
+            const { data, error } = await supabase
+                .from('users')
+                .insert([{
+                    username: userData.username,
+                    email: userData.email,
+                    password: hashedPassword,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                }])
+                .select()
+                .single();
+
+            if (error) {
+                throw new AppError(
+                    'Failed to create user',
+                    500,
+                    ErrorCodes.DATABASE_ERROR
+                );
+            }
+
+            return data;
+        } catch (error) {
+            console.error('Create user error:', error);
+            throw error;
         }
-
-        const hashedPassword = await bcrypt.hash(userData.password, 10);
-        
-        const { data, error } = await supabase
-            .from('users')
-            .insert([{
-                username: userData.username,
-                email: userData.email,
-                password: hashedPassword,
-                created_at: new Date(),
-                updated_at: new Date()
-            }])
-            .select()
-            .single();
-
-        if (error) throw error;
-        return data;
     }
 
-    static async updatePassword(userId, currentPassword, newPassword) {
-        validatePassword(currentPassword, 'Current password');
-        validatePassword(newPassword, 'New password');
-
-        if (currentPassword === newPassword) {
-            throw new AppError(
-                'New password must be different from current password',
-                400,
-                ErrorCodes.VALIDATION_ERROR
-            );
-        }
-
-        const user = await this.findById(userId);
-        if (!user) {
-            throw new AppError('User not found', 404, ErrorCodes.USER_NOT_FOUND);
-        }
-
-        // Verifikasi password lama
-        const isCorrectPassword = await bcrypt.compare(currentPassword, user.password);
-        if (!isCorrectPassword) {
-            throw new AppError(
-                'Current password is incorrect',
-                401,
-                ErrorCodes.INVALID_CREDENTIALS
-            );
-        }
-
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
-        
-        const { data, error } = await supabase
-            .from('users')
-            .update({ 
-                password: hashedPassword,
-                password_changed_at: new Date(),
-                updated_at: new Date()
-            })
-            .eq('id', userId)
-            .select()
-            .single();
-
-        if (error) throw error;
-        return data;
-    }
-
-    static async comparePassword(password, hashedPassword) {
-        return bcrypt.compare(password, hashedPassword);
+    static async comparePassword(plainPassword, hashedPassword) {
+        return bcrypt.compare(plainPassword, hashedPassword);
     }
 }
 

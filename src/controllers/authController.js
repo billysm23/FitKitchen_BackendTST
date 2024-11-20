@@ -67,90 +67,80 @@ const SESSION_CONFIG = {
 
 exports.login = asyncHandler(async (req, res, next) => {
     const { email, password } = req.body;
-    
-    // Dapatkan token dari header jika ada
-    const existingToken = req.header('Authorization')?.replace('Bearer ', '');
 
-    if (existingToken) {
-        try {
-            const decoded = jwt.verify(existingToken, process.env.JWT_SECRET);
-            const activeSession = await Session.findOne({
-                userId: decoded.userId,
-                token: existingToken,
-                isActive: true
-            });
-
-            if (activeSession) {
-                throw new AppError(
-                    'You have an active session. Please logout first.',
-                    400,
-                    ErrorCodes.SESSION_EXISTS
-                );
-            }
-        } catch (err) {
-            // Jika token tidak valid atau expired, lanjutkan proses login
-            if (err.name !== 'JsonWebTokenError' && err.name !== 'TokenExpiredError') {
-                throw err;
-            }
+    try {
+        // Find user
+        const user = await User.findByEmail(email);
+        
+        // Check if user exists
+        if (!user) {
+            throw new AppError(
+                'No user found with this email',
+                404,
+                ErrorCodes.USER_NOT_FOUND
+            );
         }
-    }
-    
-    // Cek user terdaftar atau tidak
-    const user = await User.findByEmail(email);
-    if (!user) {
-        throw new AppError(
-            'Email is not registered. Please register first.',
-            404,
-            ErrorCodes.USER_NOT_FOUND
-        );
-    }
-    
-    // Cek password
-    const isPasswordTrue = await bcrypt.compare(password, user.password);
-    if (!isPasswordTrue) {
-        throw new AppError(
-            'Invalid password',
-            401,
-            ErrorCodes.INVALID_CREDENTIALS
-        );
-    }
-    
-    // Cek apakah sudah ada session aktif
-    const activeSessions = await Session.find({
-        userId: user.id,
-        isActive: true
-    });
 
-    // Jika melebihi batas, nonaktifkan semua session lama
-    if (activeSessions.length >= SESSION_CONFIG.MAX_ACTIVE_SESSIONS) {
-        await Session.updateMany(
-            { userId: user.id, isActive: true },
-            { isActive: false }
-        );
-    }
-    
-    // Generate token
-    const token = generateToken(user.id, user.username);
-
-    // Buat session baru
-    await Session.create({
-        userId: user.id,
-        token,
-        isActive: true,
-        expiresAt: new Date(Date.now() + SESSION_CONFIG.SESSION_EXPIRY)
-    });
-
-    res.json({
-        success: true,
-        data: {
-            token,
-            user: {
-                id: user.id,
-                username: user.username,
-                email: user.email
-            }
+        // Check password
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            throw new AppError(
+                'Invalid password',
+                401,
+                ErrorCodes.INVALID_CREDENTIALS
+            );
         }
-    });
+
+        // Generate token
+        const token = generateToken(user.id, user.username);
+
+        // Check active sessions
+        const { data: activeSessions } = await supabase
+            .from('sessions')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('is_active', true);
+
+        // Handle active sessions
+        if (activeSessions && activeSessions.length >= SESSION_CONFIG.MAX_ACTIVE_SESSIONS) {
+            await supabase
+                .from('sessions')
+                .update({ is_active: false })
+                .eq('user_id', user.id)
+                .eq('is_active', true);
+        }
+
+        // Create new session
+        const { error: sessionError } = await supabase
+            .from('sessions')
+            .insert([{
+                user_id: user.id,
+                token,
+                is_active: true,
+                expires_at: new Date(Date.now() + SESSION_CONFIG.SESSION_EXPIRY).toISOString()
+            }]);
+
+        if (sessionError) {
+            throw new AppError(
+                'Failed to create session',
+                500,
+                ErrorCodes.DATABASE_ERROR
+            );
+        }
+
+        // Remove password from response
+        const { password: _, ...userWithoutPassword } = user;
+
+        res.status(200).json({
+            success: true,
+            data: {
+                token,
+                user: userWithoutPassword
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
 });
 
 exports.logout = asyncHandler(async (req, res, next) => {
