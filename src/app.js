@@ -14,12 +14,32 @@ const app = express();
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
+const allowedOrigins = [
+    'https://fit-kitchen-frontend-tst.vercel.app',
+    'http://localhost:3000'
+];
+
 const corsOptions = {
-    origin: ['http://localhost:5173', 'http://localhost:3000'],
+    origin: function (origin, callback) {
+        if (!origin) return callback(null, true);
+        
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Access-Control-Allow-Origin'],
+    allowedHeaders: [
+        'Content-Type', 
+        'Authorization', 
+        'Access-Control-Allow-Origin',
+        'Access-Control-Allow-Methods',
+        'Access-Control-Allow-Headers'
+    ],
     credentials: true,
-    optionsSuccessStatus: 200
+    optionsSuccessStatus: 200,
+    maxAge: 86400 // 24 hours
 };
 
 app.use(cors(corsOptions));
