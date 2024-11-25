@@ -1,3 +1,4 @@
+// middleware/auth.js
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 const Session = require('../models/session');
@@ -27,15 +28,17 @@ const auth = async (req, res, next) => {
         }
 
         // Cari user
-        const user = await User.findById(decoded.userId);
+        const userData = await User.findById(decoded.userId);
+        
         // Bukan user terdaftar
-        if (!user) {
+        if (!userData) {
             throw new AppError('User not found', 404, ErrorCodes.USER_NOT_FOUND);
         }
-        // Kalau terdaftar, user bisa melakukan request
-        req.user = user;
+        
+        req.user = userData;
         req.token = token;
         req.session = session;
+        
         next();
     } catch (error) {
         next(error);

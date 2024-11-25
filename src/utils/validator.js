@@ -66,4 +66,35 @@ const validator = {
     }
 };
 
+exports.validatePasswordUpdate = (req, res, next) => {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+        throw new AppError(
+            'Both current password and new password are required',
+            400,
+            ErrorCodes.MISSING_FIELD
+        );
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
+    if (!passwordRegex.test(newPassword)) {
+        throw new AppError(
+            'New password must contain at least 6 characters, including uppercase, lowercase, number and special character',
+            400,
+            ErrorCodes.VALIDATION_ERROR
+        );
+    }
+
+    if (currentPassword === newPassword) {
+        throw new AppError(
+            'New password must be different from current password',
+            400,
+            ErrorCodes.VALIDATION_ERROR
+        );
+    }
+
+    next();
+};
+
 module.exports = validator;

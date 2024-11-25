@@ -30,6 +30,32 @@ class User {
         }
     }
 
+    static async findById(id) {
+        try {
+            const { data, error } = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (error) {
+                if (error.code === 'PGRST116') {
+                    return null; // User not found
+                }
+                throw new AppError(
+                    'Database error while finding user',
+                    500,
+                    ErrorCodes.DATABASE_ERROR
+                );
+            }
+
+            return data;
+        } catch (error) {
+            console.error('Find by id error:', error);
+            throw error;
+        }
+    }
+
     static async findOne(query) {
         try {
             let queryBuilder = supabase

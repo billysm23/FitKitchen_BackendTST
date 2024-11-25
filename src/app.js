@@ -5,6 +5,8 @@ const { helmetConfig, rateLimitConfig, authLimiter } = require('./middleware/sec
 const authRoutes = require('./routes/authRoutes');
 const errorHandler = require('./middleware/errorHandler');
 const ErrorCodes = require('./utils/errors/errorCodes');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpecs = require('./config/swagger');
 
 const app = express();
 
@@ -26,10 +28,31 @@ app.use(cors(corsOptions));
 app.use(helmetConfig);
 app.use(rateLimitConfig);
 app.use('/api/auth', authLimiter);
+// Documentation
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
 // Health
-app.get('/health', (req, res) => {
-    res.status(200).json({ status: 'healthy' });
+app.get('/health', async (req, res) => {
+    try {
+        // Cek koneksi database
+        await supabase.from('users').select('count').limit(1);
+        
+        const healthStatus = {
+            status: 'healthy',
+            timestamp: new Date().toISOString(),
+            uptime: process.uptime(),
+            memoryUsage: process.memoryUsage(),
+            environment: process.env.NODE_ENV,
+            version: process.version
+        };
+        
+        res.status(200).json(healthStatus);
+    } catch (error) {
+        res.status(500).json({
+            status: 'unhealthy',
+            error: error.message
+        });
+    }
 });
 
 // Routes
