@@ -13,9 +13,13 @@ const options = {
         },
         servers: [
             {
-                url: 'http://localhost:5000'|| 'https://fit-kitchen-backend-tst.vercel.app/',
-                description: '  ',
+                url: 'http://localhost:5000',
+                description: 'Local Development Server'
             },
+            {
+                url: 'https://fit-kitchen-backend-tst.vercel.app',
+                description: 'Production Server'
+            }
         ],
         components: {
             securitySchemes: {
