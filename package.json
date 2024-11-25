@@ -6,6 +6,12 @@
     "scripts": {
         "start": "node src/app.js",
         "dev": "nodemon src/app.js",
+        "docker:build": "docker build -t fitkitchen-backend .",
+        "docker:run": "docker run -p 5000:5000 --env-file .env fitkitchen-backend",
+        "docker:compose": "docker-compose up",
+        "docker:compose:build": "docker-compose up --build",
+        "docker:compose:down": "docker-compose down",
+        "docker:clean": "docker system prune -a",
         "lint": "eslint .",
         "test": "jest",
         "test:watch": "jest --watch"
