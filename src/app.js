@@ -5,8 +5,8 @@ const { helmetConfig, rateLimitConfig, authLimiter } = require('./middleware/sec
 const authRoutes = require('./routes/authRoutes');
 const errorHandler = require('./middleware/errorHandler');
 const ErrorCodes = require('./utils/errors/errorCodes');
+const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
-const swaggerSpecs = require('./config/swagger');
 
 const app = express();
 
@@ -29,7 +29,54 @@ app.use(helmetConfig);
 app.use(rateLimitConfig);
 app.use('/api/auth', authLimiter);
 // Documentation
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
+const options = {
+    definition: {
+        openapi: '3.0.0',
+        info: {
+            title: 'FitKitchen API Documentation',
+            version: '1.0.0',
+            description: 'API documentation for FitKitchen - personalized catering system',
+            contact: {
+                name: 'Billy Samuel Setiawan',
+            },
+        },
+        servers: [
+            {
+                url: 'http://localhost:5000',
+                description: 'Local Development Server'
+            },
+            {
+                url: 'https://fit-kitchen-backend-tst.vercel.app',
+                description: 'Production Server'
+            }
+        ],
+    },
+    apis: ['./src/routes/*.js'],
+};
+
+const specs = swaggerJsdoc(options);
+
+// Konfigurasi Swagger UI dengan opsi tambahan
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
+    explorer: true,
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: "FitKitchen API Documentation",
+    swaggerOptions: {
+        supportedSubmitMethods: ['get', 'post', 'put', 'delete', 'patch'],
+        docExpansion: 'none',
+        filter: true,
+        showRequestDuration: true,
+    }
+}));
+
+// Tambahkan header untuk mengizinkan akses ke Swagger UI
+app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', true);
+    next();
+});
 
 // Health
 app.get('/health', (req, res) => {

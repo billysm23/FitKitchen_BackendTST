@@ -2,32 +2,22 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
 const helmetConfig = helmet({
-    // Mencegah clickjacking dengan X-Frame-Options
-    frameguard: {
-        action: 'deny'
-    },
-    // Mengatur Content Security Policy
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'"],
-            styleSrc: ["'self'", "'unsafe-inline'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://fit-kitchen-backend-tst.vercel.app"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fit-kitchen-backend-tst.vercel.app"],
             imgSrc: ["'self'", "data:", "https:"],
-            connectSrc: ["'self'"],
-        }
+            connectSrc: ["'self'", "https://fit-kitchen-backend-tst.vercel.app"],
+            fontSrc: ["'self'", "https:"],
+            objectSrc: ["'none'"],
+            mediaSrc: ["'self'"],
+            frameSrc: ["'self'"],
+        },
     },
-    // Menyembunyikan X-Powered-By header
-    hidePoweredBy: true,
-    // Mencegah MIME type sniffing
-    noSniff: true,
-    // Mengaktifkan XSS filter di browser
-    xssFilter: true,
-    // Mengatur HSTS (HTTP Strict Transport Security)
-    hsts: {
-        maxAge: 31536000,
-        includeSubDomains: true,
-        preload: true
-    }
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    originAgentCluster: true
 });
 
 // Konfigurasi Rate Limiter

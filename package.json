@@ -11,6 +11,7 @@
         "docker:compose": "docker-compose up",
         "docker:compose:build": "docker-compose up --build",
         "docker:compose:down": "docker-compose down",
+        "build": "npm install && swagger-jsdoc -d swaggerDef.js -o swagger.json",
         "docker:clean": "docker system prune -a",
         "lint": "eslint .",
         "test": "jest",
