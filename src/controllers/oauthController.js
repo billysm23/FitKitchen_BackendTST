@@ -9,12 +9,21 @@ const SESSION_CONFIG = {
     SESSION_EXPIRY: 24 * 60 * 60 * 1000 // 24 jam
 };
 
+const getCallbackUrl = () => {
+    const clientUrl = process.env.CLIENT_URL;
+    const baseUrl = clientUrl.endsWith('/') ? clientUrl.slice(0, -1) : clientUrl;
+    return `${baseUrl}/auth/callback`;
+};
+
 exports.googleSignIn = async (req, res) => {
     try {
+        const callbackUrl = getCallbackUrl();
+        console.log('Callback URL:', callbackUrl);
+
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: `${process.env.CLIENT_URL}/auth/callback`,
+                redirectTo: callbackUrl,
                 queryParams: {
                     access_type: 'offline',
                     prompt: 'consent',
@@ -22,8 +31,12 @@ exports.googleSignIn = async (req, res) => {
             }
         });
 
-        if (error) throw error;
+        if (error) {
+            console.error('Google OAuth Error:', error);
+            throw error;
+        }
 
+        console.log('OAuth URL generated:', data.url); // Debugging
         res.json({
             success: true,
             data: {
@@ -45,6 +58,7 @@ exports.googleSignIn = async (req, res) => {
 exports.handleOAuthCallback = async (req, res) => {
     try {
         const { code } = req.query;
+        const clientUrl = process.env.CLIENT_URL;
 
         if (!code) {
             throw new AppError(
@@ -54,9 +68,14 @@ exports.handleOAuthCallback = async (req, res) => {
             );
         }
 
+        console.log('Processing OAuth callback with code:', code); // Debugging
+
         const { data: { user, session }, error } = await supabase.auth.exchangeCodeForSession(code);
 
-        if (error) throw error;
+        if (error) {
+            console.error('Session exchange error:', error);
+            throw error;
+        }
 
         if (!user || !session) {
             throw new AppError(
@@ -75,6 +94,7 @@ exports.handleOAuthCallback = async (req, res) => {
             { expiresIn: '24h' }
         );
 
+        // Sessions
         const activeSessions = await Session.find({
             userId: user.id,
             isActive: true
@@ -94,13 +114,17 @@ exports.handleOAuthCallback = async (req, res) => {
             expiresAt: new Date(Date.now() + SESSION_CONFIG.SESSION_EXPIRY)
         });
 
-        // Create or update user in our users table
+        // Update or create user in database
         const { data: userData, error: userError } = await supabase
             .from('users')
             .upsert({
                 id: user.id,
                 email: user.email,
                 username: user.user_metadata.full_name || user.email.split('@')[0],
+                oauth_provider: 'google',
+                oauth_id: user.id,
+                avatar_url: user.user_metadata.avatar_url,
+                full_name: user.user_metadata.full_name,
                 updated_at: new Date().toISOString()
             }, {
                 onConflict: 'id',
@@ -108,12 +132,21 @@ exports.handleOAuthCallback = async (req, res) => {
             })
             .single();
 
-        if (userError) throw userError;
+        if (userError) {
+            console.error('User upsert error:', userError);
+            throw userError;
+        }
 
-        res.redirect(`${process.env.CLIENT_URL}/auth/success?token=${token}`);
+        const successUrl = new URL('/auth/success', clientUrl);
+        successUrl.searchParams.append('token', token);
+        
+        console.log('Redirecting to:', successUrl.toString());
+        res.redirect(successUrl.toString());
 
     } catch (error) {
         console.error('OAuth Callback Error:', error);
-        res.redirect(`${process.env.CLIENT_URL}/auth/error?message=${encodeURIComponent(error.message)}`);
+        const errorUrl = new URL('/auth/error', clientUrl);
+        errorUrl.searchParams.append('message', encodeURIComponent(error.message));
+        res.redirect(errorUrl.toString());
     }
 };

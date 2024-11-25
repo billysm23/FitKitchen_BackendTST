@@ -16,6 +16,7 @@ app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
 const allowedOrigins = [
     'https://fit-kitchen-frontend-tst.vercel.app',
+    'https://fit-kitchen-backend-tst.vercel.app',
     'http://localhost:3000'
 ];
 
