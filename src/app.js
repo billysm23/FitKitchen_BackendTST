@@ -28,6 +28,7 @@ app.use(cors(corsOptions));
 app.use(helmetConfig);
 app.use(rateLimitConfig);
 app.use('/api/auth', authLimiter);
+
 // Documentation
 const options = {
     definition: {
@@ -50,14 +51,26 @@ const options = {
                 description: 'Production Server'
             }
         ],
+        components: {
+            securitySchemes: {
+                bearerAuth: {
+                    type: 'http',
+                    scheme: 'bearer',
+                    bearerFormat: 'JWT',
+                },
+            },
+        },
+        security: [{
+            bearerAuth: [],
+        }],
     },
-    apis: ['./src/routes/*.js'],
+    apis: ['./src/routes/*.js', './src/models/*.js'],
 };
 
 const specs = swaggerJsdoc(options);
 
 // Konfigurasi Swagger UI dengan opsi tambahan
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(specs, {
     explorer: true,
     customCss: '.swagger-ui .topbar { display: none }',
     customSiteTitle: "FitKitchen API Documentation",
@@ -68,15 +81,6 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
         showRequestDuration: true,
     }
 }));
-
-// Tambahkan header untuk mengizinkan akses ke Swagger UI
-app.use((req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    res.setHeader('Access-Control-Allow-Credentials', true);
-    next();
-});
 
 // Health
 app.get('/health', (req, res) => {
