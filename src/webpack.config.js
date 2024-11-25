@@ -1,18 +1,32 @@
-const path = require('path');
-const CopyWebpackPlugin = require('copy-webpack-plugin');
-
 module.exports = {
-    node: {
-        __dirname: false
+    mode: 'development',
+    watch: true,
+    watchOptions: {
+      aggregateTimeout: 100
     },
-
+    node: {
+      global: true,
+      __dirname: true,
+    },
+    devtool: 'eval',
+    entry: ['./app.js'],
+    target: 'node',
+    module: {
+      rules: [{
+        test: /\.js$/,
+        exclude: /node_modules/,
+        use: {
+          loader: 'babel-loader'
+        }
+      }]
+    },
     plugins: [
-        new CopyWebpackPlugin([
-            'node_modules/swagger-ui-dist/swagger-ui.css',
-            'node_modules/swagger-ui-dist/swagger-ui-bundle.js',
-            'node_modules/swagger-ui-dist/swagger-ui-standalone-preset.js',
-            'node_modules/swagger-ui-dist/favicon-16x16.png',
-            'node_modules/swagger-ui-dist/favicon-32x32.png'
-        ])
-    ]
-};
+      new NodemonPlugin(),
+      new Dotenv(),
+      new CleanWebpackPlugin(['build/*'])
+    ],
+    output: {
+      path: path.resolve(__dirname, 'build'),
+      filename: 'bundle.dev.js'
+    },
+  };

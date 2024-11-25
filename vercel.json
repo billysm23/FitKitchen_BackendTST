@@ -8,7 +8,7 @@
     ],
     "routes": [
         {
-            "src": "/api-docs/(.*)",
+            "src": "/api/docs/(.*)",
             "headers": {
                 "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' https:;",
                 "Content-Type": "text/html; charset=utf-8",
@@ -19,21 +19,21 @@
             "dest": "src/app.js"
         },
         {
-            "src": "/api-docs/swagger-ui.css",
+            "src": "/api/docs/swagger-ui.css",
             "headers": {
                 "Content-Type": "text/css"
             },
             "dest": "src/app.js"
         },
         {
-            "src": "/api-docs/swagger-ui-bundle.js",
+            "src": "/api/docs/swagger-ui-bundle.js",
             "headers": {
                 "Content-Type": "application/javascript"
             },
             "dest": "src/app.js"
         },
         {
-            "src": "/api-docs/swagger-ui-standalone-preset.js",
+            "src": "/api/docs/swagger-ui-standalone-preset.js",
             "headers": {
                 "Content-Type": "application/javascript"
             },
