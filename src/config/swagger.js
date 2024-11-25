@@ -13,7 +13,7 @@ const options = {
         },
         servers: [
             {
-                url: 'http://localhost:5000',
+                url: 'http://localhost:5000'|| 'https://fit-kitchen-backend-tst.vercel.app/',
                 description: '  ',
             },
         ],
