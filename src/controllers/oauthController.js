@@ -17,26 +17,24 @@ const getCallbackUrl = () => {
 
 exports.googleSignIn = async (req, res) => {
     try {
-        const callbackUrl = getCallbackUrl();
-        console.log('Callback URL:', callbackUrl);
+        const { origin } = req.headers;
+        const redirectTo = `${origin || process.env.CLIENT_URL}/auth/callback`;
+        
+        console.log('Initializing Google OAuth with redirect:', redirectTo);
 
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: callbackUrl,
+                redirectTo,
                 queryParams: {
                     access_type: 'offline',
-                    prompt: 'consent',
+                    prompt: 'consent'
                 }
             }
         });
 
-        if (error) {
-            console.error('Google OAuth Error:', error);
-            throw error;
-        }
+        if (error) throw error;
 
-        console.log('OAuth URL generated:', data.url); // Debugging
         res.json({
             success: true,
             data: {
@@ -48,8 +46,8 @@ exports.googleSignIn = async (req, res) => {
         res.status(500).json({
             success: false,
             error: {
-                code: ErrorCodes.EXTERNAL_SERVICE_ERROR,
-                message: 'Failed to initialize Google sign in'
+                message: 'Failed to initialize Google sign in',
+                details: error.message
             }
         });
     }
@@ -57,49 +55,29 @@ exports.googleSignIn = async (req, res) => {
 
 exports.handleOAuthCallback = async (req, res) => {
     try {
-        const { code } = req.body;
+        const { code } = req.query;
+        
+        console.log('Received callback with code:', code?.substring(0, 10) + '...');
 
         if (!code) {
-            console.error('No code received in callback');
-            throw new AppError(
-                'Authorization code is missing',
-                400,
-                ErrorCodes.MISSING_FIELD
-            );
+            throw new Error('No authorization code provided');
         }
 
-        console.log('Processing OAuth callback with code:', code);
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+        
+        if (error) throw error;
 
-        const { data: { user, session }, error } = await supabase.auth.exchangeCodeForSession(code);
-
-        if (error) {
-            console.error('Session exchange error:', error);
-            throw error;
-        }
+        const { user, session } = data;
 
         if (!user || !session) {
-            throw new AppError(
-                'Failed to authenticate user',
-                401,
-                ErrorCodes.AUTHENTICATION_FAILED
-            );
+            throw new Error('Failed to get user data from Supabase');
         }
 
         const token = jwt.sign(
-            { 
-                userId: user.id,
-                email: user.email
-            },
+            { id: user.id, email: user.email },
             process.env.JWT_SECRET,
             { expiresIn: '24h' }
         );
-
-        await Session.create({
-            userId: user.id,
-            token,
-            isActive: true,
-            expiresAt: new Date(Date.now() + SESSION_CONFIG.SESSION_EXPIRY)
-        });
 
         res.json({
             success: true,
@@ -108,22 +86,17 @@ exports.handleOAuthCallback = async (req, res) => {
                 user: {
                     id: user.id,
                     email: user.email,
-                    username: user.user_metadata.full_name || user.email.split('@')[0]
+                    name: user.user_metadata?.full_name
                 }
             }
         });
-
     } catch (error) {
-        console.error('OAuth Callback Error:', {
-            message: error.message,
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-        });
-        
-        res.status(error.statusCode || 500).json({
+        console.error('OAuth Callback Error:', error);
+        res.status(500).json({
             success: false,
             error: {
-                code: error.errorCode || ErrorCodes.AUTHENTICATION_FAILED,
-                message: error.message
+                message: 'Authentication failed',
+                details: error.message
             }
         });
     }
