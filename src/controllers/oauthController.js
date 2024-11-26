@@ -57,10 +57,10 @@ exports.googleSignIn = async (req, res) => {
 
 exports.handleOAuthCallback = async (req, res) => {
     try {
-        const { code } = req.query;
-        const clientUrl = process.env.CLIENT_URL;
+        const { code } = req.body;
 
         if (!code) {
+            console.error('No code received in callback');
             throw new AppError(
                 'Authorization code is missing',
                 400,
@@ -68,7 +68,7 @@ exports.handleOAuthCallback = async (req, res) => {
             );
         }
 
-        console.log('Processing OAuth callback with code:', code); // Debugging
+        console.log('Processing OAuth callback with code:', code);
 
         const { data: { user, session }, error } = await supabase.auth.exchangeCodeForSession(code);
 
@@ -94,19 +94,6 @@ exports.handleOAuthCallback = async (req, res) => {
             { expiresIn: '24h' }
         );
 
-        // Sessions
-        const activeSessions = await Session.find({
-            userId: user.id,
-            isActive: true
-        });
-
-        if (activeSessions.length >= SESSION_CONFIG.MAX_ACTIVE_SESSIONS) {
-            await Session.updateMany(
-                { userId: user.id, isActive: true },
-                { isActive: false }
-            );
-        }
-
         await Session.create({
             userId: user.id,
             token,
@@ -114,39 +101,30 @@ exports.handleOAuthCallback = async (req, res) => {
             expiresAt: new Date(Date.now() + SESSION_CONFIG.SESSION_EXPIRY)
         });
 
-        // Update or create user in database
-        const { data: userData, error: userError } = await supabase
-            .from('users')
-            .upsert({
-                id: user.id,
-                email: user.email,
-                username: user.user_metadata.full_name || user.email.split('@')[0],
-                oauth_provider: 'google',
-                oauth_id: user.id,
-                avatar_url: user.user_metadata.avatar_url,
-                full_name: user.user_metadata.full_name,
-                updated_at: new Date().toISOString()
-            }, {
-                onConflict: 'id',
-                returning: true
-            })
-            .single();
-
-        if (userError) {
-            console.error('User upsert error:', userError);
-            throw userError;
-        }
-
-        const successUrl = new URL('/auth/success', clientUrl);
-        successUrl.searchParams.append('token', token);
-        
-        console.log('Redirecting to:', successUrl.toString());
-        res.redirect(successUrl.toString());
+        res.json({
+            success: true,
+            data: {
+                token,
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    username: user.user_metadata.full_name || user.email.split('@')[0]
+                }
+            }
+        });
 
     } catch (error) {
-        console.error('OAuth Callback Error:', error);
-        const errorUrl = new URL('/auth/error', clientUrl);
-        errorUrl.searchParams.append('message', encodeURIComponent(error.message));
-        res.redirect(errorUrl.toString());
+        console.error('OAuth Callback Error:', {
+            message: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+        
+        res.status(error.statusCode || 500).json({
+            success: false,
+            error: {
+                code: error.errorCode || ErrorCodes.AUTHENTICATION_FAILED,
+                message: error.message
+            }
+        });
     }
 };

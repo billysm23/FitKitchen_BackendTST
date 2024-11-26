@@ -611,6 +611,6 @@ router.put('/update-password', auth, authController.updatePassword);
 
 // OAuth routes
 router.get('/google', oauthController.googleSignIn);
-router.get('/callback', oauthController.handleOAuthCallback);
+router.post('/callback', oauthController.handleOAuthCallback);
 
 module.exports = router;
