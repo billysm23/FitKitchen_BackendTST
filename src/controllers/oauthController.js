@@ -2,23 +2,15 @@ const supabase = require('../config/database');
 const AppError = require('../utils/errors/AppError');
 const ErrorCodes = require('../utils/errors/errorCodes');
 const jwt = require('jsonwebtoken');
-const Session = require('../models/session');
 
 const SESSION_CONFIG = {
     MAX_ACTIVE_SESSIONS: 2,
     SESSION_EXPIRY: 24 * 60 * 60 * 1000 // 24 jam
 };
 
-const getCallbackUrl = () => {
-    const clientUrl = process.env.CLIENT_URL;
-    const baseUrl = clientUrl.endsWith('/') ? clientUrl.slice(0, -1) : clientUrl;
-    return `${baseUrl}/auth/callback`;
-};
-
 exports.googleSignIn = async (req, res) => {
     try {
         const origin = req.headers.origin || process.env.CLIENT_URL;
-        // Buat redirectUrl yang lengkap
         const redirectUrl = `${origin}/auth/callback`;
         
         console.log('Initializing Google OAuth with redirect:', redirectUrl);
@@ -76,7 +68,7 @@ exports.handleOAuthCallback = async (req, res) => {
             );
         }
 
-        // Get user data from Supabase using access token
+        // Get user data from Supabase
         const { data: { user }, error: userError } = await supabase.auth.getUser(access_token);
 
         if (userError) {
@@ -92,54 +84,134 @@ exports.handleOAuthCallback = async (req, res) => {
             );
         }
 
-        // Generate JWT token
-        const token = jwt.sign(
-            { 
-                userId: user.id,
-                email: user.email
-            },
-            process.env.JWT_SECRET,
-            { expiresIn: '24h' }
-        );
+        console.log('User data from Supabase:', user);
 
-        // Handle sessions
-        await Session.updateMany(
-            { userId: user.id, isActive: true },
-            { isActive: false }
-        );
+        try {
+            // Cek user sudah ada
+            const { data: existingUser, error: checkError } = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', user.id)
+                .single();
 
-        await Session.create({
-            userId: user.id,
-            token,
-            isActive: true,
-            expiresAt: new Date(Date.now() + SESSION_CONFIG.SESSION_EXPIRY)
-        });
-
-        // Update or create user in our database
-        const { data: userData, error: dbError } = await supabase
-            .from('users')
-            .upsert({
-                id: user.id,
-                email: user.email,
-                username: user.user_metadata?.full_name || user.email.split('@')[0],
-                updated_at: new Date().toISOString()
-            })
-            .single();
-
-        if (dbError) throw dbError;
-
-        res.json({
-            success: true,
-            data: {
-                token,
-                user: {
-                    id: user.id,
-                    email: user.email,
-                    username: userData.username,
-                    avatar_url: user.user_metadata?.avatar_url
-                }
+            if (checkError && checkError.code !== 'PGRST116') {
+                console.error('Error checking existing user:', checkError);
+                throw checkError;
             }
-        });
+
+            let userData;
+            
+            if (!existingUser) {
+                // Insert user baru
+                const { data: newUser, error: insertError } = await supabase
+                    .from('users')
+                    .insert([{
+                        id: user.id,
+                        email: user.email,
+                        username: user.user_metadata?.full_name || user.email.split('@')[0],
+                        full_name: user.user_metadata?.full_name,
+                        oauth_provider: 'google',
+                        oauth_id: user.identities?.[0]?.id,
+                        avatar_url: user.user_metadata?.avatar_url,
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    }])
+                    .select()
+                    .single();
+
+                if (insertError) {
+                    console.error('User insert error:', insertError);
+                    throw insertError;
+                }
+
+                userData = newUser;
+            } else {
+                // Update user
+                const { data: updatedUser, error: updateError } = await supabase
+                    .from('users')
+                    .update({
+                        email: user.email,
+                        username: user.user_metadata?.full_name || user.email.split('@')[0],
+                        full_name: user.user_metadata?.full_name,
+                        avatar_url: user.user_metadata?.avatar_url,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', user.id)
+                    .select()
+                    .single();
+
+                if (updateError) {
+                    console.error('User update error:', updateError);
+                    throw updateError;
+                }
+
+                userData = updatedUser;
+            }
+
+            if (!userData) {
+                throw new Error('Failed to create/update user data');
+            }
+
+            console.log('User data saved:', userData);
+
+            const token = jwt.sign(
+                {
+                    userId: userData.id,
+                    email: userData.email
+                },
+                process.env.JWT_SECRET,
+                { expiresIn: '24h' }
+            );
+
+            // Deactivate session lama
+            const { error: sessionDeactivateError } = await supabase
+                .from('sessions')
+                .update({ is_active: false })
+                .eq('user_id', userData.id)
+                .eq('is_active', true);
+
+            if (sessionDeactivateError) {
+                console.error('Error deactivating old sessions:', sessionDeactivateError);
+            }
+
+            // Buat session baru
+            const { error: sessionCreateError } = await supabase
+                .from('sessions')
+                .insert([{
+                    user_id: userData.id,
+                    token: token,
+                    is_active: true,
+                    expires_at: new Date(Date.now() + SESSION_CONFIG.SESSION_EXPIRY).toISOString(),
+                    created_at: new Date().toISOString()
+                }]);
+
+            if (sessionCreateError) {
+                console.error('Session creation error:', sessionCreateError);
+                throw sessionCreateError;
+            }
+
+            res.json({
+                success: true,
+                data: {
+                    token,
+                    user: {
+                        id: userData.id,
+                        email: userData.email,
+                        username: userData.username,
+                        full_name: userData.full_name,
+                        avatar_url: userData.avatar_url
+                    }
+                }
+            });
+
+        } catch (dbError) {
+            console.error('Database operation error:', dbError);
+            throw new AppError(
+                'Failed to process user data',
+                500,
+                ErrorCodes.DATABASE_ERROR
+            );
+        }
 
     } catch (error) {
         console.error('OAuth Callback Error:', error);
@@ -147,7 +219,8 @@ exports.handleOAuthCallback = async (req, res) => {
             success: false,
             error: {
                 code: error.errorCode || ErrorCodes.AUTHENTICATION_FAILED,
-                message: error.message || 'Authentication failed'
+                message: error.message || 'Authentication failed',
+                details: error.details || error.message
             }
         });
     }
