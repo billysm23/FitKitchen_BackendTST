@@ -603,7 +603,6 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const oauthController = require('../controllers/oauthController');
 const auth = require('../middleware/auth');
-// const validator = require('../utils/validator');
 
 router.post('/register', authController.register);
 router.post('/login', authController.login);
