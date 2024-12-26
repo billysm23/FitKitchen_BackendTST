@@ -42,14 +42,14 @@ const validator = {
     validatePassword: (password, fieldName = 'Password') => {
         if (!password) {
             throw new AppError(
-                `${fieldName} is required`,
+                'Password is required',
                 400,
                 ErrorCodes.MISSING_FIELD
             );
         }
         if (password.length < 6) {
             throw new AppError(
-                `${fieldName} must be at least 6 characters long`,
+                'Password must be at least 6 characters long',
                 400,
                 ErrorCodes.VALIDATION_ERROR
             );
@@ -57,7 +57,7 @@ const validator = {
         const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
         if (!passwordRegex.test(password)) {
             throw new AppError(
-                `${fieldName} must contain at least one uppercase letter, one lowercase letter, one number and one special character`,
+                'Password must contain at least one uppercase letter, one lowercase letter, one number and one special character',
                 400,
                 ErrorCodes.VALIDATION_ERROR
             );

@@ -5,9 +5,14 @@ const bcrypt = require('bcryptjs');
 const AppError = require('../utils/errors/AppError');
 const ErrorCodes = require('../utils/errors/errorCodes');
 const asyncHandler = require('../utils/asyncHandler');
+const validator = require('../utils/validator');
 const supabase = require('../config/database');
 
 const JWT_EXPIRES_IN = '24h';
+const SESSION_CONFIG = {
+    MAX_ACTIVE_SESSIONS: 2,
+    SESSION_EXPIRY: 24 * 60 * 60 * 1000 // 24 jam
+};
 
 const generateToken = (userId, username) => {
     return jwt.sign(
@@ -20,14 +25,17 @@ const generateToken = (userId, username) => {
 exports.register = asyncHandler(async (req, res, next) => {
     const { username, email, password } = req.body;
 
-    // Cek user yang sudah ada
     try {
+        validator.validateUsername(username);
+        validator.validateEmail(email);
+        
+        // Check existing user
         const { data: existingUser, error: searchError } = await supabase
-            .from('users')
-            .select('email, username')
-            .or(`email.eq.${email},username.eq.${username}`)
-            .single();
-
+        .from('users')
+        .select('email, username')
+        .or(`email.eq.${email},username.eq.${username}`)
+        .single();
+        
         if (searchError && searchError.code !== 'PGRST116') {
             throw new AppError(
                 'Error checking existing user',
@@ -35,7 +43,7 @@ exports.register = asyncHandler(async (req, res, next) => {
                 ErrorCodes.DATABASE_ERROR
             );
         }
-
+        
         if (existingUser) {
             let message = 'User already exists with this ';
             if (existingUser.email === email && existingUser.username === username) {
@@ -47,7 +55,9 @@ exports.register = asyncHandler(async (req, res, next) => {
             }
             throw new AppError(message, 409, ErrorCodes.RESOURCE_EXISTS);
         }
-
+        
+        validator.validatePassword(password);
+        
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -86,13 +96,12 @@ exports.register = asyncHandler(async (req, res, next) => {
                     user_id: newUser.id,
                     token,
                     is_active: true,
-                    expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
+                    expires_at: new Date(Date.now() + SESSION_CONFIG.SESSION_EXPIRY).toISOString() // 24 hours
                 }
             ]);
 
         if (sessionError) {
             console.error('Session creation error:', sessionError);
-            // Continue anyway since user is created
         }
 
         res.status(201).json({
@@ -112,15 +121,13 @@ exports.register = asyncHandler(async (req, res, next) => {
     }
 });
 
-const SESSION_CONFIG = {
-    MAX_ACTIVE_SESSIONS: 2,
-    SESSION_EXPIRY: 24 * 60 * 60 * 1000 // 24 jam
-};
-
 exports.login = asyncHandler(async (req, res, next) => {
     const { email, password } = req.body;
 
     try {
+        validator.validateEmail(email);
+        validator.validatePassword(password);
+
         // Find user
         const user = await User.findByEmail(email);
         
@@ -153,7 +160,7 @@ exports.login = asyncHandler(async (req, res, next) => {
             .eq('user_id', user.id)
             .eq('is_active', true);
 
-        // Handle active sessions
+        // Nonactive sessions (exceed time limit)
         if (activeSessions && activeSessions.length >= SESSION_CONFIG.MAX_ACTIVE_SESSIONS) {
             await supabase
                 .from('sessions')
@@ -197,7 +204,7 @@ exports.login = asyncHandler(async (req, res, next) => {
 
 exports.logout = asyncHandler(async (req, res, next) => {
     try {
-        // Ambil token
+        // Take token
         const token = req.header('Authorization')?.replace('Bearer ', '');
         
         if (!token) {
@@ -208,7 +215,7 @@ exports.logout = asyncHandler(async (req, res, next) => {
             );
         }
 
-        // Verifikasi token
+        // Verify token
         let decoded;
         try {
             decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -255,7 +262,7 @@ exports.updatePassword = asyncHandler(async (req, res, next) => {
     try {
         const { currentPassword, newPassword } = req.body;
 
-        // Validasi input 
+        // Validate input
         if (!currentPassword || !newPassword) {
             throw new AppError(
                 'Current password and new password are required',
@@ -272,7 +279,7 @@ exports.updatePassword = asyncHandler(async (req, res, next) => {
             );
         }
 
-        // Cari data user
+        // Search user data
         const { data: userData, error: fetchError } = await supabase
             .from('users')
             .select('*')
@@ -288,7 +295,7 @@ exports.updatePassword = asyncHandler(async (req, res, next) => {
             );
         }
 
-        // Cek password benar atau tidak
+        // Check password
         const isPasswordValid = await bcrypt.compare(currentPassword, userData.password);
         if (!isPasswordValid) {
             throw new AppError(
@@ -329,7 +336,7 @@ exports.updatePassword = asyncHandler(async (req, res, next) => {
             );
         }
 
-        // Buat token baru dan nonaktifkan session
+        // Create new token and deactivate session
         const token = jwt.sign(
             {
                 userId: updatedUser.id,
@@ -352,7 +359,7 @@ exports.updatePassword = asyncHandler(async (req, res, next) => {
                 user_id: updatedUser.id,
                 token,
                 is_active: true,
-                expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+                expires_at: new Date(Date.now() + SESSION_CONFIG.SESSION_EXPIRY).toISOString()
             });
 
         res.json({

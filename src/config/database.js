@@ -24,9 +24,9 @@ const testConnection = async () => {
     try {
         const { data, error } = await supabase.from('users').select('count').limit(1);
         if (error) throw error;
-        console.log('✅ Supabase connection successful');
+        console.log('Supabase connection successful');
     } catch (error) {
-        console.error('❌ Supabase connection failed:', error.message);
+        console.error('Supabase connection failed:', error.message);
         throw error;
     }
 };
