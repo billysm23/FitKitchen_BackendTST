@@ -24,10 +24,10 @@ const ErrorCodes = {
     CONNECTION_ERROR: '4002',
     QUERY_ERROR: '4003',
 
-    // Business Logic (5xxx)
-    QUIZ_ALREADY_SUBMITTED: '5001',
-    LESSON_LOCKED: '5002',
-    PREREQUISITE_NOT_MET: '5003',
+    // Health Assessment (5xxx)
+    ASSESSMENT_EXISTS: '5001',
+    INVALID_ASSESSMENT_DATA: '5002',
+    INVALID_ASSESSMENT_DATA: '5003',
 
     // Server (9xxx)
     INTERNAL_SERVER_ERROR: '9001',

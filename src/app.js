@@ -7,6 +7,7 @@ const errorHandler = require('./middleware/errorHandler');
 const ErrorCodes = require('./utils/errors/errorCodes');
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
+const healthAssessmentRoutes = require('./routes/healthAssessmentRoutes');
 
 const app = express();
 
@@ -110,6 +111,7 @@ app.get('/health', (req, res) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api', healthAssessmentRoutes);
 
 app.use(errorHandler);
 
