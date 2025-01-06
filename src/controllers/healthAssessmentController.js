@@ -133,7 +133,7 @@ const createAssessment = asyncHandler(async (req, res, next) => {
         const bmi_category = getBMICategory(bmi);
         const bmr = calculateBMR(req.body.weight, req.body.height, req.body.age, req.body.gender);
         const tdee = calculateTDEE(bmr, req.body.activity_level);
-        const primaryGoal = ['weight_loss', 'muscle_gain', 'maintenance'].includes(req.body.health_goal)? req.body.health_goal : 'maintenance';
+        const primaryGoal = ['fat_loss', 'muscle_gain', 'maintenance'].includes(req.body.health_goal)? req.body.health_goal : 'maintenance';
         const finalCal = calculateFinalCalories(tdee, primaryGoal);
         const macronutrients = calculateMacronutrients(req.body.weight, req.body.height, primaryGoal, bmi_category, req.body.macro_ratio, finalCal);
 
