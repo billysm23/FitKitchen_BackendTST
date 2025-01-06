@@ -77,36 +77,65 @@ const createAssessment = asyncHandler(async (req, res, next) => {
                 case 'weight_loss':
                     finalCal = Math.max(tdee - 500, 1200);
                     break;
-                default: // maintenance
+                default:
                     finalCal = tdee;
             }
             
             return Math.round(finalCal);
         };
         
-        const calculateMacronutrients = (finalCal, macroRatio) => {
+        const calculateMacronutrients = (weight, height, goalType, bmiCategory, macroRatio, finalCal) => {
+            let proteinPerKg;
+            switch(goalType) {
+                case 'muscle_gain':
+                    proteinPerKg = 2.0;
+                    break;
+                case 'weight_loss':
+                    proteinPerKg = 2.2;
+                    break;
+                default:
+                    proteinPerKg = 1.6;
+            }
+            
+            let adjustedWeight = weight;
+            if (bmiCategory === 'Overweight' || bmiCategory === 'Obese') {
+                const idealWeight = 48.0 + (2.7 * (height / 2.54 - 60));
+                
+                adjustedWeight = ((weight - idealWeight) * 0.25) + idealWeight;
+            }
+
+            const proteinGrams = Math.round(adjustedWeight * proteinPerKg);
+            const proteinCals = proteinGrams * 4;
+            const remainingCals = finalCal - proteinCals;
+
             const ratios = {
-                moderate_carb: { protein: 0.30, fats: 0.35, carbs: 0.35 },
-                lower_carb: { protein: 0.40, fats: 0.40, carbs: 0.20 },
-                higher_carb: { protein: 0.30, fats: 0.20, carbs: 0.50 }
+                moderate_carb: { carbs: 0.50, fats: 0.50 },
+                lower_carb: { carbs: 0.25, fats: 0.75 },
+                higher_carb: { carbs: 0.70, fats: 0.30 }
             };
-        
+
             const selectedRatio = ratios[macroRatio] || ratios.moderate_carb;
+
+            const carbCals = remainingCals * selectedRatio.carbs;
+            const fatCals = remainingCals * selectedRatio.fats;
+
+            const carbGrams = Math.max(130, Math.round(carbCals / 4));
+            const fatGrams = Math.max(Math.round(weight * 0.5), Math.round(fatCals / 9));
         
             return {
-                protein: Math.round((finalCal * selectedRatio.protein) / 4),
-                fats: Math.round((finalCal * selectedRatio.fats) / 9),
-                carbs: Math.round((finalCal * selectedRatio.carbs) / 4)
+                protein: proteinGrams,
+                fats: fatGrams,
+                carbs: carbGrams
             };
         };
 
         const bmi = calculateBMI(req.body.weight, req.body.height);
+        const bmi_category = getBMICategory(bmi);
         const bmr = calculateBMR(req.body.weight, req.body.height, req.body.age, req.body.gender);
         const tdee = calculateTDEE(bmr, req.body.activity_level);
-        const primaryGoal = req.body.health_goal.find(goal =>
-            ['weight_loss', 'muscle_gain', 'maintenance'].includes(goal)) || 'maintenance';
+        const primaryGoal = ['weight_loss', 'muscle_gain', 'maintenance'].includes(req.body.health_goal)? req.body.health_goal : 'maintenance';
         const finalCal = calculateFinalCalories(tdee, primaryGoal);
-        const macronutrients = calculateMacronutrients(finalCal, req.body.macro_ratio);
+        const macronutrients = calculateMacronutrients(req.body.weight, req.body.height, primaryGoal, bmi_category, req.body.macro_ratio, finalCal);
 
         const assessmentData = {
             user_id: userId,
@@ -122,7 +151,7 @@ const createAssessment = asyncHandler(async (req, res, next) => {
             target_weight: req.body.target_weight,
             metrics: {
                 bmi,
-                bmi_category: getBMICategory(bmi),
+                bmi_category,
                 bmr,
                 tdee,
                 final_cal: finalCal,
