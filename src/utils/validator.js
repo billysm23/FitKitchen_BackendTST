@@ -54,7 +54,7 @@ const validator = {
                 ErrorCodes.VALIDATION_ERROR
             );
         }
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@#^_()\[\]$!%*?&])[A-Za-z\d@#^_()\[\]$!%*?&]{6,}$/;
         if (!passwordRegex.test(password)) {
             throw new AppError(
                 'Password must contain at least one uppercase letter, one lowercase letter, one number and one special character',

@@ -260,7 +260,7 @@ exports.logout = asyncHandler(async (req, res, next) => {
 
 exports.updatePassword = asyncHandler(async (req, res, next) => {
     try {
-        const { currentPassword, newPassword } = req.body;
+        const { currentPassword, newPassword, confirmPassword } = req.body;
 
         // Validate input
         if (!currentPassword || !newPassword) {
@@ -275,9 +275,19 @@ exports.updatePassword = asyncHandler(async (req, res, next) => {
             throw new AppError(
                 'New password must be different from current password',
                 400,
-                ErrorCodes.VALIDATION_ERROR
+                ErrorCodes.INVALID_INPUT
             );
         }
+        
+        if (confirmPassword !== newPassword) {
+            throw new AppError(
+                'Confirm password must be same as new password',
+                400,
+                ErrorCodes.INVALID_INPUT
+            );
+        }
+
+        validator.validatePassword(newPassword);
 
         // Search user data
         const { data: userData, error: fetchError } = await supabase
@@ -364,7 +374,7 @@ exports.updatePassword = asyncHandler(async (req, res, next) => {
 
         res.json({
             success: true,
-            message: 'Password updated successfully',
+            message: 'Password updated successfully, please login again',
             data: {
                 token,
                 user: {
