@@ -10,6 +10,7 @@ const swaggerUi = require('swagger-ui-express');
 const healthAssessmentRoutes = require('./routes/healthAssessmentRoutes');
 const profileRoutes = require('./routes/profileRoutes');
 const menuRoutes = require('./routes/menuRoutes');
+const mealPlanRoutes = require('./routes/mealPlanRoutes');
 
 const app = express();
 
@@ -116,6 +117,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api', healthAssessmentRoutes);
 app.use('/api', profileRoutes);
 app.use('/api/menu', menuRoutes);
+app.use('/api/meal-plan', mealPlanRoutes);
 
 app.use(errorHandler);
 
