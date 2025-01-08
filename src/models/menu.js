@@ -138,7 +138,6 @@ class Menu {
                 query = query.gte('protein_per_serving', filters.minProtein);
             }
 
-            // Paging
             if (filters.page && filters.limit) {
                 const from = (filters.page - 1) * filters.limit;
                 const to = from + filters.limit - 1;
@@ -227,12 +226,7 @@ class Menu {
             }
     
             return {
-                data: menus || [],
-                pagination: {
-                    page,
-                    limit,
-                    total: count || 0
-                }
+                data: menus || []
             };
         } catch (error) {
             console.error('Search menus error:', error);

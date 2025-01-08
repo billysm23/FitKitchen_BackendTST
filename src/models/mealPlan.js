@@ -265,13 +265,7 @@ class MealPlan {
             });
     
             return {
-                data: transformedData,
-                pagination: {
-                    total: count || 0,
-                    limit,
-                    offset,
-                    hasMore: (offset + limit) < count
-                }
+                data: transformedData
             };
     
         } catch (error) {

@@ -94,7 +94,6 @@ const options = {
 
 const specs = swaggerJsdoc(options);
 
-// Konfigurasi Swagger UI dengan opsi tambahan
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(specs, {
     explorer: true,
     customCss: '.swagger-ui .topbar { display: none }',

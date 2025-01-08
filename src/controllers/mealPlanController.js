@@ -31,7 +31,6 @@ exports.createPlan = asyncHandler(async (req, res, next) => {
         const { plan_type, menuIds } = req.body;
         const userId = req.user.id;
 
-        // Menggunakan menuController untuk validasi menu
         req.body.plan_type = plan_type;
         const validationResponse = await new Promise((resolve, reject) => {
             const mockRes = {
@@ -128,8 +127,7 @@ exports.getPlanHistory = asyncHandler(async (req, res, next) => {
 
         res.status(200).json({
             success: true,
-            data: history.data,
-            pagination: history.pagination
+            data: history.data
         });
     } catch (error) {
         next(error);

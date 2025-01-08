@@ -94,12 +94,7 @@ exports.getMenusByCategory = asyncHandler(async (req, res, next) => {
 
         res.status(200).json({
             success: true,
-            data: menus,
-            pagination: {
-                page: filters.page,
-                limit: filters.limit,
-                total: menus.length
-            }
+            data: menus
         });
     } catch (error) {
         console.error('Get menus by category error:', error);
@@ -129,8 +124,7 @@ exports.searchMenus = asyncHandler(async (req, res, next) => {
 
         res.status(200).json({
             success: true,
-            data: result.data,
-            pagination: result.pagination
+            data: result.data || []
         });
 
     } catch (error) {
@@ -174,7 +168,7 @@ exports.searchMenus = asyncHandler(async (req, res, next) => {
 exports.getRecommendedMenus = asyncHandler(async (req, res, next) => {
     try {
         const userId = req.user.id;
-        const { plan_type = 'single' } = req.body;
+        const { plan_type = 'single' } = req.query;
 
         // Validate plan type
         const validPlanTypes = ['single', 'half_day', 'full_day'];
@@ -230,10 +224,6 @@ exports.getRecommendedMenus = asyncHandler(async (req, res, next) => {
         };
 
         const selectedPlan = planConfigs[plan_type];
-        console.log('Selected plan configuration:', {
-            plan_type,
-            config: selectedPlan
-        });
 
         const { data: allMenus, error: menuError } = await supabase
             .from('menu')
@@ -276,7 +266,6 @@ exports.getRecommendedMenus = asyncHandler(async (req, res, next) => {
         let filteredMenus = allMenus;
 
         if (userAllergies.length > 0) {
-            console.log('Filtering menus for allergies:', userAllergies);
             filteredMenus = allMenus.filter(menu => {
                 const menuAllergens = menu.menu_ingredients
                     .filter(mi => mi.ingredients.is_allergen)
@@ -288,7 +277,7 @@ exports.getRecommendedMenus = asyncHandler(async (req, res, next) => {
             });
         }
 
-        // Hitung skor untuk setiap menu
+        // Calculate score
         const scoredMenus = filteredMenus.map(menu => {
             const score = calculateMenuScore(menu, healthProfile);
             return {
@@ -297,7 +286,6 @@ exports.getRecommendedMenus = asyncHandler(async (req, res, next) => {
             };
         });
 
-        // Urutkan berdasarkan skor (skor lebih rendah = lebih baik)
         scoredMenus.sort((a, b) => a.score - b.score);
 
         res.status(200).json({
@@ -357,7 +345,7 @@ function calculateMenuScore(menu, healthProfile) {
 
 exports.validateMenuSelection = asyncHandler(async (req, res, next) => {
     try {
-        const { menuIds, plan_type = 'single' } = req.body;
+        const { menuIds, plan_type } = req.body;
         const userId = req.user.id;
 
         // Validate input
@@ -398,7 +386,6 @@ exports.validateMenuSelection = asyncHandler(async (req, res, next) => {
 
         const selectedPlan = planConfigs[plan_type];
 
-        // Validasi jumlah menu yang dipilih
         if (menuIds.length < selectedPlan.minMenus) {
             throw new AppError(
                 `${plan_type} plan requires at least ${selectedPlan.minMenus} menu selection(s)`,
@@ -415,7 +402,6 @@ exports.validateMenuSelection = asyncHandler(async (req, res, next) => {
             );
         }
 
-        // Ambil data health profile
         const { data: healthProfile, error: healthError } = await supabase
             .from('health_assessments')
             .select('*')
@@ -430,7 +416,6 @@ exports.validateMenuSelection = asyncHandler(async (req, res, next) => {
             );
         }
 
-        // Ambil menu yang dipilih
         const { data: selectedMenus, error: menuError } = await supabase
             .from('menu')
             .select(`
@@ -457,7 +442,6 @@ exports.validateMenuSelection = asyncHandler(async (req, res, next) => {
             );
         }
 
-        // Cek alergi
         const userAllergies = healthProfile.health_history?.allergies || [];
         const allergensCheck = selectedMenus.every(menu => {
             const menuAllergens = menu.menu_ingredients
