@@ -501,8 +501,8 @@ exports.validateMenuSelection = asyncHandler(async (req, res, next) => {
         }
 
         // Validate score
-        const SCORE_THRESHOLD = 30;
-        if (nutritionScore > SCORE_THRESHOLD) {
+        const SCORE_THRESHOLD = 40;
+        if (nutritionScore > SCORE_THRESHOLD && plan_type !== 'single') {
             isValid = false;
             validationMessage = validationMessage || 'Nutritional balance needs improvement';
         }
