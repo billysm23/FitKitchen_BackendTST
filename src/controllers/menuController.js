@@ -197,7 +197,6 @@ exports.getRecommendedMenus = asyncHandler(async (req, res, next) => {
             );
         }
 
-        // Define plan configurations
         const planConfigs = {
             single: {
                 minMenus: 1,
@@ -213,7 +212,7 @@ exports.getRecommendedMenus = asyncHandler(async (req, res, next) => {
             },
             full_day: {
                 minMenus: 2,
-                maxMenus: 6,
+                maxMenus: 8,
                 calorieRatio: 0.9,
                 maxTotalCalories: healthProfile.metrics.final_cal * 0.9
             }
@@ -375,7 +374,7 @@ exports.validateMenuSelection = asyncHandler(async (req, res, next) => {
             },
             full_day: {
                 minMenus: 2,
-                maxMenus: 6,
+                maxMenus: 8,
                 calorieRatio: 0.9
             }
         };
@@ -497,7 +496,7 @@ exports.validateMenuSelection = asyncHandler(async (req, res, next) => {
         }
 
         // Validate score
-        const SCORE_THRESHOLD = 40;
+        const SCORE_THRESHOLD = 50;
         if (nutritionScore > SCORE_THRESHOLD && plan_type !== 'single') {
             isValid = false;
             validationMessage = validationMessage || 'Nutritional balance needs improvement';
