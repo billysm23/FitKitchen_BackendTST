@@ -105,20 +105,16 @@ exports.getMenusByCategory = asyncHandler(async (req, res, next) => {
 exports.searchMenus = asyncHandler(async (req, res, next) => {
     try {
         const searchTerm = req.query.search || req.body.search;
-        const { 
-            categoryId, 
-            minCalories, 
-            maxCalories,
-            page = 1,
-            limit = 10
+        const {
+            categoryId,
+            minCalories,
+            maxCalories
         } = req.query;
 
         const filters = {
             categoryId,
             minCalories: minCalories ? Number(minCalories) : undefined,
-            maxCalories: maxCalories ? Number(maxCalories) : undefined,
-            page: Number(page),
-            limit: Number(limit)
+            maxCalories: maxCalories ? Number(maxCalories) : undefined
         };
         const result = await Menu.searchMenus(searchTerm, filters);
 

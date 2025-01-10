@@ -213,12 +213,6 @@ class Menu {
                 query = query.lte('calories_per_serving', filters.maxCalories);
             }
     
-            const page = Math.max(1, Number(filters.page) || 1);
-            const limit = Math.max(1, Number(filters.limit) || 10);
-            const from = (page - 1) * limit;
-            const to = from + limit - 1;
-            query = query.range(from, to);
-    
             const { data: menus, error, count } = await query;
     
             if (error) {
