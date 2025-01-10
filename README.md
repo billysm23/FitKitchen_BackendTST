@@ -1,14 +1,15 @@
 # FitKitchen - Personalized Catering System
+## Billy Samuel Setiawan - 18222039
 
 FitKitchen is a personalized catering system designed to provide healthy, customized meals based on individual health needs and preferences. It combines nutritional science with culinary excellence to deliver the perfect meal plan for each user.
 
 ## Website
-`https://fit-kitchen-frontend-tst.vercel.app`
-For testing API directly to backend: `https://fitkitchen-backend.up.railway.app`
+https://fit-kitchen-frontend-tst.vercel.app
+For testing API directly to backend: https://fitkitchen-backend.up.railway.app
 
 ## API Documentation
 
-The API documentation is in `https://fit-kitchen-frontend-tst.vercel.app/api-docs` 
+The API documentation is in https://fit-kitchen-frontend-tst.vercel.app/api-docs
 
 ## Features
 
