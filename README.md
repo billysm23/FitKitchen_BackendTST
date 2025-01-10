@@ -2,6 +2,14 @@
 
 FitKitchen is a personalized catering system designed to provide healthy, customized meals based on individual health needs and preferences. It combines nutritional science with culinary excellence to deliver the perfect meal plan for each user.
 
+## Website
+`https://fit-kitchen-frontend-tst.vercel.app`
+For testing API directly to backend: `https://fitkitchen-backend.up.railway.app`
+
+## API Documentation
+
+The API documentation is in `https://fit-kitchen-frontend-tst.vercel.app/api-docs` 
+
 ## Features
 
 - User registration and authentication with email/password and Google OAuth
@@ -17,8 +25,8 @@ FitKitchen is a personalized catering system designed to provide healthy, custom
 ### Backend
 - Node.js with Express.js for server-side logic
 - Supabase for database and authentication
-- JWT for user authentication and session management
-- Swagger for API documentation
+- JWT (Bearer token) for user authentication and session management
+- Docker for concatenation
 
 ### Frontend
 - React.js for building the user interface
@@ -49,7 +57,25 @@ npm install
 ```
 3. Set up environment variables:
 - Create a `.env` file in the `backend` directory and provide the required environment variables
+```bash
+NODE_ENV=development or production
+PORT=PORT
+JWT_SECRET=JWT_SECRET
+JWT_EXPIRES_IN=JWT_EXPIRES_IN
+SUPABASE_URL=SUPABASE_URL
+SUPABASE_KEY=SUPABASE_KEY
+CLIENT_URL=CLIENT_URL
+SUPABASE_GOOGLE_CLIENT_ID=SUPABASE_GOOGLE_CLIENT_ID
+SUPABASE_GOOGLE_CLIENT_SECRET=SUPABASE_GOOGLE_CLIENT_SECRET
+```
 - Create a `.env` file in the `frontend` directory and provide the required environment variables
+```bash
+REACT_APP_API_URL=REACT_APP_API_URL
+REACT_APP_ENV=development or production
+GENERATE_SOURCEMAP=false
+REACT_APP_GOOGLE_CLIENT_ID=REACT_APP_GOOGLE_CLIENT_ID
+REACT_APP_RECIPE_API_KEY=this_is_from_my_friend_Steven_Corne_so_you_can_ask_him
+```
 
 4. Start the development servers:
 ```bash
@@ -59,7 +85,3 @@ Frontend:
 cd fit-kitchen-frontend
 npm start
 ```
-
-## API Documentation
-
-The API documentation is in `https://fit-kitchen-frontend-tst.vercel.app/api-docs` .
