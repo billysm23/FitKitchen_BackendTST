@@ -8,8 +8,9 @@ https://fit-kitchen-frontend-tst.vercel.app
 For testing API directly to backend: https://fitkitchen-backend.up.railway.app
 
 ## API Documentation
+Main Report: https://docs.google.com/document/d/1uTAKZIA2Duj45DMhAbs9XPqd9WPt1WfE9tO6SI_jdx8/edit?usp=sharing
 
-The API documentation is in https://fit-kitchen-frontend-tst.vercel.app/api-docs
+API documentation: https://fit-kitchen-frontend-tst.vercel.app/api-docs
 
 ## Features
 
